@@ -44,20 +44,38 @@ jobs:
   check:
     strategy:
       matrix:
-        target: [aarch64-linux-android, armv7-linux-androideabi, wasm32-unknown-unknown]
+        target:
+          - aarch64-linux-android
+          - armv7-linux-androideabi
+          - wasm32-unknown-unknown
+        build-std:
+          - no
+        include:
+          - target: i686-win7-windows-gnu
+            build-std: yes
+          - target: x86_64-win7-windows-gnu
+            build-std: yes
+    name: 'check (${{ matrix.target }})'
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
-    - name: Install toolchain
+    - if: ${{ matrix.build-std == 'no' }}
+      name: Install toolchain (stable)
       uses: dtolnay/rust-toolchain@stable
       with:
         targets: ${{ matrix.target }}
+    - if: ${{ matrix.build-std == 'yes' }}
+      name: Install toolchain (nightly)
+      uses: dtolnay/rust-toolchain@nightly
+      with:
+        targets: x86_64-unknown-linux-gnu
+        components: rust-src
     - name: check
       run: |
-        cargo check --target ${{ matrix.target }}
-        cargo check --target ${{ matrix.target }} --features tokio
-        cargo check --target ${{ matrix.target }} --features smol
-        cargo check --target ${{ matrix.target }} --all-features
+        cargo check ${{ matrix.build-std == 'yes' && '-Zbuild-std' || '' }} --target ${{ matrix.target }}
+        cargo check ${{ matrix.build-std == 'yes' && '-Zbuild-std' || '' }} --target ${{ matrix.target }} --features tokio
+        cargo check ${{ matrix.build-std == 'yes' && '-Zbuild-std' || '' }} --target ${{ matrix.target }} --features smol
+        cargo check ${{ matrix.build-std == 'yes' && '-Zbuild-std' || '' }} --target ${{ matrix.target }} --all-features
 
   rustdoc:
     runs-on: ubuntu-latest
